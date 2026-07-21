@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+body {
+  background-color: #E2FBE3;
+  margin: 0;
+  height: 100vh;
+}
+
+.bg-primary { background-color: #E2FBE3; }
+.bg-secondary { background-color: #A2FAA3; }
+.bg-accent { background-color: #4F759B; }
+

@@ -1,0 +1,1 @@
+export const validateUser = (u: string, p: string) => u === 'admin' && p === 'admin';
