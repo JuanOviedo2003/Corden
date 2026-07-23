@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 const GRID_SIZE = 20;
 const DEFAULT_FURNITURE_SIZE_GRID = 5;
@@ -7,18 +7,24 @@ const MAX_EDGE_HIT_DISTANCE_GRID = 1.5;
 
 interface FurnitureDefinition {
   name: string;
-  icon: string;
   color: string;
 }
 
 const FURNITURE_CATALOG: Record<number, FurnitureDefinition> = {
-  1: { name: 'Cama', icon: '🛏️', color: '#6475B8' },
-  2: { name: 'Asiento', icon: '🪑', color: '#6D8E72' },
-  3: { name: 'Sofá de dos puestos', icon: '🛋️', color: '#A56C57' },
+  1: { name: 'Cama', color: '#6475B8' },
+  2: { name: 'Asiento', color: '#6D8E72' },
+  3: { name: 'Sofá', color: '#A56C57' },
+  4: { name: 'Mesa', color: '#B89C64' },
+  5: { name: 'Escritorio', color: '#64B8B4' },
+  6: { name: 'Estantería', color: '#B86464' },
+  7: { name: 'Lámpara', color: '#B8B464' },
+  8: { name: 'Armario', color: '#7E64B8' },
+  9: { name: 'Alfombra', color: '#64B86D' },
+  10: { name: 'Espejo', color: '#B864A4' },
 };
 
 const getFurnitureDefinition = (itemId: number): FurnitureDefinition =>
-  FURNITURE_CATALOG[itemId] ?? { name: `Mueble ${itemId}`, icon: '▦', color: '#4F759B' };
+  FURNITURE_CATALOG[itemId] ?? { name: `Mueble ${itemId}`, color: '#4F759B' };
 
 const rectanglePoints = (gridPos: GridCoord, gridSize: GridSize) => [
   { x: gridPos.x, y: gridPos.y },
@@ -118,7 +124,6 @@ interface FurnitureEditModalProps {
 
 const FurnitureEditModal = ({ furniture, onSave, onClose }: FurnitureEditModalProps) => {
   const box = furnitureBoundingBox(furniture.points);
-  // Normalize points to local 0,0
   const [points, setPoints] = useState(
     furniture.points.map(p => ({ x: p.x - box.x, y: p.y - box.y }))
   );
@@ -166,13 +171,12 @@ const FurnitureEditModal = ({ furniture, onSave, onClose }: FurnitureEditModalPr
   };
 
   const handleSave = () => {
-    // Re-denormalize to global coordinates
     onSave(points.map(p => ({ x: p.x + box.x, y: p.y + box.y })));
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white p-6 rounded-xl shadow-2xl w-[600px] max-h-[90vh] overflow-auto">
+      <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto">
         <h2 className="text-xl font-bold mb-4">Editar Forma del Mueble</h2>
         <div
           className="relative border border-gray-300 bg-white"
@@ -253,8 +257,6 @@ const furnitureBoundingBox = (points: GridCoord[]) => {
 
 const canPlaceFurniture = (region: Region, points: GridCoord[]) =>
   points.every(point => pointInPolygon(point, region.points));
-
-const getFurniturePoints = (furniture: Furniture) => furniture.points;
 
 const closestPointOnSegment = (point: GridCoord, start: GridCoord, end: GridCoord) => {
   const dx = end.x - start.x;
@@ -493,7 +495,7 @@ const GridComponent = ({
         );
         setDragPreview(null);
       }}
-      className={`h-4/5 w-full bg-white relative ${drawingMode ? 'cursor-crosshair' : ''} ${deletingMode ? 'cursor-not-allowed' : ''}`}
+      className={`w-full h-full bg-white relative ${drawingMode ? 'cursor-crosshair' : ''} ${deletingMode ? 'cursor-not-allowed' : ''}`}
       style={{
         backgroundImage: 'linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px)',
         backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
@@ -586,8 +588,7 @@ const GridComponent = ({
               }}
             >
               <span className="flex flex-col items-center justify-center gap-1 px-1 text-center leading-tight">
-                <span className="text-2xl" aria-hidden="true">{definition.icon}</span>
-                <span className="text-[11px]">{definition.name}</span>
+                <span className="text-[11px] font-bold">{definition.name}</span>
               </span>
             </div>
 
@@ -617,7 +618,6 @@ const GridComponent = ({
           }}
         >
           <span className="flex flex-col items-center justify-center gap-1 px-1 text-center leading-tight">
-            <span className="text-2xl" aria-hidden="true">{getFurnitureDefinition(dragPreview.itemId).icon}</span>
             <span className="text-[11px]">{getFurnitureDefinition(dragPreview.itemId).name}</span>
           </span>
         </div>
@@ -666,28 +666,52 @@ const GridComponent = ({
 
 const Carousel = () => {
   const [items] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-  const [index, setIndex] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (!scrollRef.current) return;
+    const scrollAmount = 112; 
+    scrollRef.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+  };
+
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    const center = scrollRef.current.scrollLeft + scrollRef.current.clientWidth / 2;
+    const index = Math.round((center - scrollRef.current.clientWidth / 2) / 112);
+    setActiveIndex(Math.max(0, Math.min(items.length - 1, index)));
+  }, [items.length]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) {
+      el.addEventListener('scroll', handleScroll);
+      return () => el.removeEventListener('scroll', handleScroll);
+    }
+  }, [handleScroll]);
 
   return (
-    <div className="h-1/5 bg-secondary flex items-center justify-center relative overflow-hidden">
+    <div className="h-40 bg-secondary flex items-center gap-2 px-2 shrink-0">
       <button
         type="button"
-        onClick={() => setIndex(Math.max(0, index - 1))}
-        className="absolute left-10 z-20 rounded-full bg-accent p-4 text-white shadow-2xl ring-4 ring-white transition-transform hover:scale-110"
+        onClick={() => scroll('left')}
+        className="shrink-0 min-w-[40px] min-h-[40px] rounded-full bg-accent text-white shadow-2xl ring-2 ring-white flex items-center justify-center transition-transform hover:scale-110"
       >
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke="currentColor" strokeWidth={3} fill="none" d="M15 19l-7-7 7-7" />
         </svg>
       </button>
 
-      <div className="relative flex h-full w-full items-center justify-center pointer-events-none">
-        <div
-          className="flex items-center gap-8 pointer-events-auto transition-transform duration-700 ease-in-out"
-          style={{ transform: `translateX(calc(50% - 48px - ${index * 128}px))` }}
-        >
-          {items.map((itemId, itemIndex) => {
-            const isCentered = itemIndex === index;
+      <div 
+        ref={scrollRef}
+        className="flex-1 overflow-x-auto h-full flex items-center gap-4 scroll-smooth hide-scrollbar"
+        style={{ scrollSnapType: 'x mandatory' }}
+      >
+        <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
+        <div className="flex items-center gap-4 px-[50%]">
+          {items.map((itemId, i) => {
             const definition = getFurnitureDefinition(itemId);
+            const isActive = i === activeIndex;
             return (
               <div
                 key={itemId}
@@ -699,16 +723,11 @@ const Carousel = () => {
                   gridSize: { w: DEFAULT_FURNITURE_SIZE_GRID, h: DEFAULT_FURNITURE_SIZE_GRID },
                 })}
                 onDragEnd={clearDraggedItem}
-                className={`flex h-24 min-w-[96px] items-center justify-center rounded-xl text-white transition-all duration-700 cursor-grab ${
-                  isCentered
-                    ? 'scale-125 opacity-100 shadow-[0_0_30px_rgba(79,117,155,0.5)] ring-4 ring-white z-10'
-                    : 'scale-75 opacity-40 blur-[1px]'
-                }`}
-                style={{ backgroundColor: definition.color }}
+                className={`flex h-20 w-24 min-w-[96px] items-center justify-center rounded-xl text-white cursor-grab shrink-0 shadow-[0_0_15px_rgba(0,0,0,0.1)] transition-all duration-300 ${isActive ? 'scale-105 opacity-100 ring-2 ring-white' : 'scale-90 opacity-50 blur-[1px]'}`}
+                style={{ backgroundColor: definition.color, scrollSnapAlign: 'center' }}
               >
                 <span className="flex flex-col items-center justify-center gap-1 px-1 text-center leading-tight">
-                  <span className={`text-2xl ${isCentered ? '' : 'text-lg'}`} aria-hidden="true">{definition.icon}</span>
-                  <span className={`font-bold ${isCentered ? 'text-sm' : 'text-[10px]'}`}>{definition.name}</span>
+                  <span className="font-bold text-xs">{definition.name}</span>
                 </span>
               </div>
             );
@@ -718,10 +737,10 @@ const Carousel = () => {
 
       <button
         type="button"
-        onClick={() => setIndex(Math.min(items.length - 1, index + 1))}
-        className="absolute right-10 z-20 rounded-full bg-accent p-4 text-white shadow-2xl ring-4 ring-white transition-transform hover:scale-110"
+        onClick={() => scroll('right')}
+        className="shrink-0 min-w-[40px] min-h-[40px] rounded-full bg-accent text-white shadow-2xl ring-2 ring-white flex items-center justify-center transition-transform hover:scale-110"
       >
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke="currentColor" strokeWidth={3} fill="none" d="M9 5l7 7-7 7" />
         </svg>
       </button>
@@ -752,7 +771,7 @@ const FloatingPanel = ({
         {isOpen ? 'Ocultar Herramientas' : 'Mostrar Herramientas'}
       </button>
       {isOpen && (
-        <div className="min-w-[320px] rounded-lg border border-gray-100 bg-white p-4 shadow-2xl">
+        <div className="w-[90vw] max-w-[320px] rounded-lg border border-gray-100 bg-white p-4 shadow-2xl">
           <div className="flex justify-center gap-4">
             <button
               type="button"
@@ -828,8 +847,6 @@ export const Dashboard = () => {
     )));
   };
 
-const getFurniturePoints = (furniture: Furniture) => furniture.points;
-
 const handleDrop = (
     regionId: string,
     draggedItem: DraggedItem,
@@ -891,7 +908,8 @@ const handleDrop = (
           onClose={() => setEditingFurniture(null)}
         />
       )}
-      <GridComponent
+      <div className="flex-grow w-full bg-white relative overflow-hidden">
+        <GridComponent
         drawingMode={isDelimiting}
         deletingMode={isDeleting}
         regions={regions}
@@ -911,7 +929,10 @@ const handleDrop = (
         )))}
         onEditFurniture={(regionId, furniture) => setEditingFurniture({ regionId, furniture })}
       />
-      <Carousel />
+      </div>
+      <div className="h-40 shrink-0">
+        <Carousel />
+      </div>
       <FloatingPanel
         isDelimiting={isDelimiting}
         isDeleting={isDeleting}
