@@ -122,6 +122,16 @@ interface FurnitureEditModalProps {
   onClose: () => void;
 }
 
+const furnitureBoundingBox = (points: GridCoord[]) => {
+  const xs = points.map(p => p.x);
+  const ys = points.map(p => p.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+};
+
 const FurnitureEditModal = ({ furniture, onSave, onClose }: FurnitureEditModalProps) => {
   const box = furnitureBoundingBox(furniture.points);
   const [points, setPoints] = useState(
@@ -243,16 +253,6 @@ const pointInPolygon = (point: GridCoord, polygon: GridCoord[]) => {
   }
 
   return inside;
-};
-
-const furnitureBoundingBox = (points: GridCoord[]) => {
-  const xs = points.map(p => p.x);
-  const ys = points.map(p => p.y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
 };
 
 const canPlaceFurniture = (region: Region, points: GridCoord[]) =>
@@ -577,7 +577,7 @@ const GridComponent = ({
               }}
               title={definition.name}
               aria-label={definition.name}
-              className={`absolute z-10 flex items-center justify-center rounded-xl text-white font-bold select-none ${selection?.type === 'furniture' && selection.furnitureId === furniture.id ? 'ring-4 ring-white ring-offset-2' : ''} ${deletingMode ? 'hover:bg-red-600 cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
+              className={`absolute z-10 flex items-center justify-center rounded-xl text-white font-bold select-none focus:outline-none ${selection?.type === 'furniture' && selection.furnitureId === furniture.id ? 'ring-2 ring-[#4F759B] ring-offset-2' : ''} ${deletingMode ? 'hover:bg-red-600 cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
               style={{
                 left: gridToPx(furniture.gridPos?.x ?? furnitureBoundingBox(furniture.points).x),
                 top: gridToPx(furniture.gridPos?.y ?? furnitureBoundingBox(furniture.points).y),
@@ -585,6 +585,7 @@ const GridComponent = ({
                 height: gridToPx(furniture.gridSize?.h ?? furnitureBoundingBox(furniture.points).h),
                 backgroundColor: definition.color,
                 clipPath: `polygon(${furniture.points.map(point => `${((point.x - (furniture.gridPos?.x ?? furnitureBoundingBox(furniture.points).x)) / (furniture.gridSize?.w ?? furnitureBoundingBox(furniture.points).w)) * 100}% ${((point.y - (furniture.gridPos?.y ?? furnitureBoundingBox(furniture.points).y)) / (furniture.gridSize?.h ?? furnitureBoundingBox(furniture.points).h)) * 100}%`).join(', ')})`,
+                outline: 'none',
               }}
             >
               <span className="flex flex-col items-center justify-center gap-1 px-1 text-center leading-tight">
@@ -595,7 +596,7 @@ const GridComponent = ({
             {selection?.type === 'furniture' && selection.furnitureId === furniture.id && (
               <div
                 key={`${furniture.id}-selection-indicator`}
-                className="absolute z-30 pointer-events-none border-2 border-white ring-2 ring-accent"
+                className="absolute z-30 pointer-events-none rounded-xl"
                 style={{
                   left: gridToPx(furniture.gridPos?.x ?? furnitureBoundingBox(furniture.points).x),
                   top: gridToPx(furniture.gridPos?.y ?? furnitureBoundingBox(furniture.points).y),
@@ -695,7 +696,7 @@ const Carousel = () => {
       <button
         type="button"
         onClick={() => scroll('left')}
-        className="shrink-0 min-w-[40px] min-h-[40px] rounded-full bg-accent text-white shadow-2xl ring-2 ring-white flex items-center justify-center transition-transform hover:scale-110"
+        className="shrink-0 min-w-[40px] min-h-[40px] border-2 border-black bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center transition-transform hover:translate-x-[-2px] hover:translate-y-[-2px]"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke="currentColor" strokeWidth={3} fill="none" d="M15 19l-7-7 7-7" />
@@ -723,7 +724,7 @@ const Carousel = () => {
                   gridSize: { w: DEFAULT_FURNITURE_SIZE_GRID, h: DEFAULT_FURNITURE_SIZE_GRID },
                 })}
                 onDragEnd={clearDraggedItem}
-                className={`flex h-20 w-24 min-w-[96px] items-center justify-center rounded-xl text-white cursor-grab shrink-0 shadow-[0_0_15px_rgba(0,0,0,0.1)] transition-all duration-300 ${isActive ? 'scale-105 opacity-100 ring-2 ring-white' : 'scale-90 opacity-50 blur-[1px]'}`}
+                className={`flex h-20 w-24 min-w-[96px] items-center justify-center border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-white cursor-grab shrink-0 transition-all duration-300 ${isActive ? 'scale-105 opacity-100' : 'scale-90 opacity-50 blur-[1px]'}`}
                 style={{ backgroundColor: definition.color, scrollSnapAlign: 'center' }}
               >
                 <span className="flex flex-col items-center justify-center gap-1 px-1 text-center leading-tight">
@@ -738,7 +739,7 @@ const Carousel = () => {
       <button
         type="button"
         onClick={() => scroll('right')}
-        className="shrink-0 min-w-[40px] min-h-[40px] rounded-full bg-accent text-white shadow-2xl ring-2 ring-white flex items-center justify-center transition-transform hover:scale-110"
+        className="shrink-0 min-w-[40px] min-h-[40px] border-2 border-black bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center transition-transform hover:translate-x-[-2px] hover:translate-y-[-2px]"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke="currentColor" strokeWidth={3} fill="none" d="M9 5l7 7-7 7" />
@@ -748,17 +749,8 @@ const Carousel = () => {
   );
 };
 
-const FloatingPanel = ({
-  isDelimiting,
-  isDeleting,
-  onToggleDelimit,
-  onToggleDelete,
-}: {
-  isDelimiting: boolean;
-  isDeleting: boolean;
-  onToggleDelimit: () => void;
-  onToggleDelete: () => void;
-}) => {
+const FloatingPanel = (props: any) => {
+  const { isDelimiting, isDeleting, onToggleDelimit, onToggleDelete } = props;
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -771,13 +763,13 @@ const FloatingPanel = ({
         {isOpen ? 'Ocultar Herramientas' : 'Mostrar Herramientas'}
       </button>
       {isOpen && (
-        <div className="w-[90vw] max-w-[320px] rounded-lg border border-gray-100 bg-white p-4 shadow-2xl">
+        <div className="w-[90vw] max-w-[320px] bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4">
           <div className="flex justify-center gap-4">
             <button
               type="button"
               onClick={onToggleDelimit}
-              className={`flex h-20 w-20 flex-col items-center justify-center rounded p-1 text-[10px] font-bold shadow-md transition-all ${
-                isDelimiting ? 'bg-accent text-white ring-4 ring-accent/30' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              className={`flex h-20 w-20 flex-col items-center justify-center border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] p-1 text-[10px] font-bold transition-all ${
+                isDelimiting ? 'bg-[#4F759B] text-white' : 'bg-white hover:bg-gray-100'
               }`}
             >
               <div className="mb-1 h-8 w-8 rounded-sm border-2 border-current border-dashed" />
@@ -786,8 +778,8 @@ const FloatingPanel = ({
             <button
               type="button"
               onClick={onToggleDelete}
-              className={`flex h-20 w-20 flex-col items-center justify-center rounded p-1 text-[10px] font-bold shadow-md transition-all ${
-                isDeleting ? 'bg-red-500 text-white ring-4 ring-red-500/30' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              className={`flex h-20 w-20 flex-col items-center justify-center border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] p-1 text-[10px] font-bold transition-all ${
+                isDeleting ? 'bg-red-500 text-white' : 'bg-white hover:bg-gray-100'
               }`}
             >
               Borrar
@@ -818,16 +810,16 @@ export const Dashboard = () => {
 
   const handleUpdateFurniture = (regionId: string, furnitureId: string, points: GridCoord[]) => {
     const box = furnitureBoundingBox(points);
-    setRegions(previous => previous.map(region => (
+    setRegions(previous => previous.map(region =>
       region.id === regionId
-        ? { 
-            ...region, 
-            items: region.items.map(item => 
+        ? {
+            ...region,
+            items: region.items.map(item =>
               item.id === furnitureId ? { ...item, points, gridPos: { x: box.x, y: box.y }, gridSize: { w: box.w, h: box.h } } : item
-            ) 
+            )
           }
         : region
-    )));
+    ));
   };
 
   const handleResizeItem = (
@@ -837,14 +829,14 @@ export const Dashboard = () => {
     gridSize: GridSize,
     points: GridCoord[],
   ) => {
-    setRegions(previous => previous.map(region => (
+    setRegions(previous => previous.map(region =>
       region.id === regionId
         ? {
             ...region,
             items: region.items.map(item => item.id === furnitureId ? { ...item, gridPos, gridSize, points } : item),
           }
         : region
-    )));
+    ));
   };
 
 const handleDrop = (
